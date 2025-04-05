@@ -30,10 +30,18 @@ except Exception as e:
 # Initialize FastAPI app
 app = FastAPI(title="LearnInFive API")
 
+
+# origin = os.getenv("ORIGIN")
+
+origins = [
+    "http://localhost:3000",  # Local development
+    "https://eli5-client.vercel.app/",  # Production
+]
+
 # Configure CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # In production, specify your frontend URL
+    allow_origins=origins,  # In production, specify your frontend URL
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
