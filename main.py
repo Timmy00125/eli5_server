@@ -1,4 +1,5 @@
 # Import necessary libraries
+import random
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from google import genai
@@ -29,6 +30,41 @@ except Exception as e:
 
 # Initialize FastAPI app
 app = FastAPI(title="LearnInFive API")
+
+
+# List of Computer Science Concepts
+CS_CONCEPTS = [
+    "Algorithm",
+    "Data Structure",
+    "Variable",
+    "Function",
+    "Loop",
+    "Conditional Statement (If/Else)",
+    "API (Application Programming Interface)",
+    "Database",
+    "Version Control (Git)",
+    "Operating System",
+    "Computer Network",
+    "IP Address",
+    "DNS (Domain Name System)",
+    "HTML",
+    "CSS",
+    "JavaScript",
+    "Python Programming Language",
+    "Debugging",
+    "Encryption",
+    "Cloud Computing",
+    "Machine Learning",
+    "Artificial Intelligence",
+    "Binary Code",
+    "Compiler",
+    "Recursion",
+    "Object-Oriented Programming (OOP)",
+    "Boolean Logic",
+    "CPU (Central Processing Unit)",
+    "RAM (Random Access Memory)",
+    "Software Development Life Cycle (SDLC)",
+]
 
 
 # origin = os.getenv("ORIGIN")
@@ -68,9 +104,11 @@ def generate_prompt(concept):
 # API endpoint to explain a concept
 @app.get("/api/explain", response_model=ConceptResponse)
 async def explain_concept():
-    concept = (
-        "Any random computer science concept "  # Fixed concept as per requirements
-    )
+    # concept = (
+    #     "Any random computer science concept "  # Fixed concept as per requirements
+    # )
+    concept = random.choice(CS_CONCEPTS)
+    logger.info(f"Randomly selected concept: {concept}")
 
     if not api_key:
         logger.error("API request made without a valid API key")
