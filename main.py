@@ -7,8 +7,6 @@ from pydantic import BaseModel
 import os
 from dotenv import load_dotenv
 import logging
-from fastapi.responses import StreamingResponse
-import json
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
@@ -53,8 +51,9 @@ def generate_prompt(concept):
     return (
         f"Explain the computer science concept of '{concept}' in a way that a five-year-old would understand. "
         f"Use simple language, real-world analogies, and avoid technical jargon. "
-        f"The explanation should be engaging, clear, and educational."
-        f"Give a python code implementing the concept"
+        f"Your explanation should be engaging, clear, and educational. Format your response using markdown "
+        f"to make it visually appealing, including headings, lists, bold text, and code examples where appropriate. "
+        f"Give a python code explaining the concepts."
     )
 
 
@@ -74,7 +73,7 @@ async def explain_concept():
         prompt = generate_prompt(concept)
 
         # Set up the model and contents according to the new API format
-        model = "gemini-2.0-flash-thinking-exp-01-21"  # Using gemini-pro as the default model
+        model = os.getenv("GEMINI_MODEL", "gemini-pro")  # Using gemini-pro as the default model
         contents = [
             types.Content(
                 role="user",
@@ -98,7 +97,7 @@ async def explain_concept():
 
         logger.info("Successfully generated content from Gemini API")
 
-        # Return the response
+        # Return the response with the markdown content
         return {
             "concept": concept,
             "explanation": response.text
@@ -112,37 +111,64 @@ async def explain_concept():
         )
 
 
-# Fallback endpoint to provide a static explanation if Gemini API fails
+# Fallback endpoint with the markdown example you provided
 @app.get("/api/fallback-explain", response_model=ConceptResponse)
 async def fallback_explain_concept():
     concept = "Algorithms"
-    explanation = """
-    Imagine you're making a sandwich. An algorithm is like your recipe!
+    explanation = """Imagine you want to build a really tall tower with your blocks.  You can't just throw blocks randomly, right? You need a plan!
 
-    It's a list of steps that tells you exactly what to do:
-    1. Take two slices of bread
-    2. Spread peanut butter on one slice
-    3. Spread jelly on the other slice
-    4. Put the slices together
+That's kind of what an **algorithm** is!  It's like a **set of instructions**, like a recipe, to do something.
 
-    Computers use algorithms too! They follow step-by-step instructions to solve problems or do tasks. 
-    Just like how your recipe helps you make a yummy sandwich, algorithms help computers know exactly what to do!
-    """
+Let's say you want to make a peanut butter and jelly sandwich.  You wouldn't just magically have a sandwich appear! You need to follow steps, right?
 
-    return {
-        "concept": concept,
-        "explanation": explanation
-    }
+Here's a **sandwich algorithm**:
 
+1. **Get two slices of bread.**  (Imagine holding up two pieces of bread)
+2. **Get the peanut butter.** (Pretend to open a peanut butter jar)
+3. **Use a spoon to put peanut butter on one slice of bread.** (Show spreading motion)
+4. **Get the jelly.** (Pretend to open a jelly jar)
+5. **Use a *clean* spoon to put jelly on the *other* slice of bread.** (Show spreading motion with a different imaginary spoon)
+6. **Put the two slices of bread together, peanut butter and jelly sides facing each other.** (Clap your hands together with bread in between)
+7. **Yay! You made a sandwich!** (Pretend to take a bite)
 
-# Health check endpoint
-@app.get("/health")
-async def health_check():
-    return {"status": "healthy", "api_key_configured": bool(api_key)}
+See?  Those steps are an **algorithm** for making a sandwich! It's a list of things to do, in order, to get a sandwich at the end.
 
+**Computers are like super-fast helpers!**  But they aren't smart on their own. You have to tell them *exactly* what to do, step-by-step, just like our sandwich recipe.
 
-# Run the application
-if __name__ == "__main__":
-    import uvicorn
+When we give computers these step-by-step instructions, we call them **algorithms**.
 
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+**Think of it like this:**
+
+* **You are the chef.** You know what you want the computer to do (like make a sandwich, or in computer terms, maybe sort toys by color, or draw a picture).
+* **The algorithm is your recipe book.** It tells the computer *exactly* what to do in what order.
+* **The computer is your super-fast kitchen helper.** It follows your recipe (algorithm) very quickly to do what you want.
+
+Algorithms can be for anything!
+
+* **Brushing your teeth algorithm:** 1. Get toothbrush. 2. Put toothpaste on toothbrush. 3. Brush up and down. 4. Brush side to side. 5. Rinse mouth.
+* **Finding your red car toy algorithm:** 1. Look in the toy box. 2. Is it red? 3. Is it a car? 4. If yes to both, you found it! If no, keep looking.
+
+**So, algorithms are just lists of steps to solve problems or do things, and computers use them to do amazing things really fast!**
+
+Now, let's see a little bit of how we can write an algorithm for a computer using something called Python. Don't worry if it looks a little strange, just see if you can spot the steps!
+
+```python
+# This is like our "recipe" for sorting toys by size!
+
+def sort_toys_by_size(toys):
+  \"\"\"
+  This algorithm takes a list of toys and puts them in order from smallest to biggest.
+  \"\"\"
+  sorted_toys = sorted(toys) # This one line does all the magic sorting!
+  return sorted_toys
+
+# Let's say these are our toys (imagine sizes from smallest to biggest)
+my_toys = ["small teddy bear", "medium car", "big truck"]
+
+# Now we use our algorithm to sort them
+sorted_toys_list = sort_toys_by_size(my_toys)
+
+# Let's see the sorted toys!
+print(sorted_toys_list) # The computer will show us the toys in order!
+```
+"""
