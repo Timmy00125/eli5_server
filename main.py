@@ -73,7 +73,9 @@ async def explain_concept():
         prompt = generate_prompt(concept)
 
         # Set up the model and contents according to the new API format
-        model = os.getenv("GEMINI_MODEL", "gemini-pro")  # Using gemini-pro as the default model
+        model = os.getenv(
+            "GEMINI_MODEL", "gemini-pro"
+        )  # Using gemini-pro as the default model
         contents = [
             types.Content(
                 role="user",
@@ -98,16 +100,13 @@ async def explain_concept():
         logger.info("Successfully generated content from Gemini API")
 
         # Return the response with the markdown content
-        return {
-            "concept": concept,
-            "explanation": response.text
-        }
+        return {"concept": concept, "explanation": response.text}
     except Exception as e:
         logger.error(f"Error generating explanation: {str(e)}")
         # Return a more graceful error while still providing useful information
         raise HTTPException(
             status_code=500,
-            detail=f"Error generating explanation. Please check your API key and network connection. Error: {str(e)}"
+            detail=f"Error generating explanation. Please check your API key and network connection. Error: {str(e)}",
         )
 
 
@@ -169,6 +168,6 @@ my_toys = ["small teddy bear", "medium car", "big truck"]
 sorted_toys_list = sort_toys_by_size(my_toys)
 
 # Let's see the sorted toys!
-print(sorted_toys_list) # The computer will show us the toys in order!
+print(sorted_toys_list) # The computer will show us the toys in order! 
 ```
 """
