@@ -68,7 +68,9 @@ def generate_prompt(concept):
 # API endpoint to explain a concept
 @app.get("/api/explain", response_model=ConceptResponse)
 async def explain_concept():
-    concept = "Algorithms"  # Fixed concept as per requirements
+    concept = (
+        "Any random computer science concept "  # Fixed concept as per requirements
+    )
 
     if not api_key:
         logger.error("API request made without a valid API key")
