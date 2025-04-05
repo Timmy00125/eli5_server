@@ -35,7 +35,7 @@ app = FastAPI(title="LearnInFive API")
 
 origins = [
     "http://localhost:3000",  # Local development
-    "https://eli5-client.vercel.app/",  # Production
+    "https://eli5-client.vercel.app",  # Production
 ]
 
 # Configure CORS
