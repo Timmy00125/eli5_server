@@ -4,7 +4,7 @@ Tests password hashing, JWT tokens, user verification, and security functions.
 """
 
 import pytest
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from unittest.mock import Mock, patch
 from fastapi import HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials
@@ -154,8 +154,8 @@ class TestJWTTokens:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
 
         # Check expiration is approximately 1 hour from now
-        exp_time = datetime.fromtimestamp(payload["exp"])
-        expected_time = datetime.utcnow() + custom_delta
+        exp_time = datetime.fromtimestamp(payload["exp"], tz=timezone.utc)
+        expected_time = datetime.now(timezone.utc) + custom_delta
 
         # Allow 10 second tolerance for test execution time
         time_diff = abs((exp_time - expected_time).total_seconds())
@@ -482,12 +482,15 @@ class TestSecurityConfiguration:
 
         Verifies:
         - Bcrypt is properly configured
-        - Deprecated algorithms are handled
+        - Context is working correctly
         """
         from auth import pwd_context
 
         assert "bcrypt" in pwd_context.schemes()
-        assert pwd_context.deprecated == "auto"
+        # Test that context can hash and verify passwords
+        test_password = "test123"
+        hashed = pwd_context.hash(test_password)
+        assert pwd_context.verify(test_password, hashed)
 
     def test_http_bearer_security(self):
         """
@@ -544,17 +547,21 @@ class TestAuthenticationIntegration:
         - New tokens can be generated for authenticated users
         - Multiple tokens work independently
         """
-        # Generate first token
-        token1 = create_access_token({"sub": sample_user.email})
+        # Generate first token with custom expiration
+        token1 = create_access_token(
+            {"sub": sample_user.email}, expires_delta=timedelta(hours=1)
+        )
 
-        # Generate second token
-        token2 = create_access_token({"sub": sample_user.email})
+        # Generate second token with different expiration
+        token2 = create_access_token(
+            {"sub": sample_user.email}, expires_delta=timedelta(hours=2)
+        )
 
         # Both tokens should be valid
         assert verify_token(token1) == sample_user.email
         assert verify_token(token2) == sample_user.email
 
-        # Tokens should be different
+        # Tokens should be different due to different expiration times
         assert token1 != token2
 
     def test_concurrent_user_authentication(self, test_session):

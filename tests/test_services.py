@@ -569,12 +569,21 @@ class TestServiceIntegration:
         - Users can't access each other's history
         - History operations respect user ownership
         """
-        # Create two users
+        import uuid
+
+        # Create two users with unique identifiers
+        unique_id1 = str(uuid.uuid4())[:8]
+        unique_id2 = str(uuid.uuid4())[:8]
+
         user1_data = UserRegistration(
-            email="user1@example.com", username="user1", password="password1"
+            email=f"user1{unique_id1}@example.com",
+            username=f"user1{unique_id1}",
+            password="password1",
         )
         user2_data = UserRegistration(
-            email="user2@example.com", username="user2", password="password2"
+            email=f"user2{unique_id2}@example.com",
+            username=f"user2{unique_id2}",
+            password="password2",
         )
 
         user1 = UserService.create_user(test_session, user1_data)
