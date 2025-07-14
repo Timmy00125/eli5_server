@@ -3,14 +3,16 @@ Tests for database.py - Database models, connections, and operations.
 Tests SQLAlchemy models, relationships, and database configuration.
 """
 
-import pytest
-import tempfile
 import os
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
+import tempfile
+import uuid
 from datetime import datetime
 
-from database import Base, User, HistoryEntry, get_db, create_tables, DATABASE_URL
+import pytest
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+
+from database import DATABASE_URL, HistoryEntry, User, create_tables, get_db
 
 
 class TestDatabaseModels:
@@ -25,9 +27,10 @@ class TestDatabaseModels:
         - All fields are properly stored
         - Timestamps are automatically set
         """
+        unique_id = str(uuid.uuid4())[:8]
         user_data = {
-            "email": "test@example.com",
-            "username": "testuser",
+            "email": f"test{unique_id}@example.com",
+            "username": f"testuser{unique_id}",
             "hashed_password": "hashed_password_here",
         }
 
@@ -54,17 +57,21 @@ class TestDatabaseModels:
         """
         from sqlalchemy.exc import IntegrityError
 
+        unique_id = str(uuid.uuid4())[:8]
+
         # Create first user
         user1 = User(
-            email="test@example.com", username="testuser", hashed_password="password1"
+            email=f"test{unique_id}@example.com",
+            username=f"testuser{unique_id}",
+            hashed_password="password1",
         )
         test_session.add(user1)
         test_session.commit()
 
         # Try to create user with same email
         user2 = User(
-            email="test@example.com",  # Same email
-            username="differentuser",
+            email=f"test{unique_id}@example.com",  # Same email
+            username=f"differentuser{unique_id}",
             hashed_password="password2",
         )
         test_session.add(user2)
@@ -76,8 +83,8 @@ class TestDatabaseModels:
 
         # Try to create user with same username
         user3 = User(
-            email="different@example.com",
-            username="testuser",  # Same username
+            email=f"different{unique_id}@example.com",
+            username=f"testuser{unique_id}",  # Same username
             hashed_password="password3",
         )
         test_session.add(user3)
@@ -94,9 +101,13 @@ class TestDatabaseModels:
         - Relationship is properly configured
         - Cascade delete works correctly
         """
+        unique_id = str(uuid.uuid4())[:8]
+
         # Create user
         user = User(
-            email="test@example.com", username="testuser", hashed_password="password"
+            email=f"test{unique_id}@example.com",
+            username=f"testuser{unique_id}",
+            hashed_password="password",
         )
         test_session.add(user)
         test_session.commit()
@@ -179,9 +190,13 @@ class TestDatabaseModels:
         - History entries are deleted when user is deleted
         - Cascade configuration works correctly
         """
+        unique_id = str(uuid.uuid4())[:8]
+
         # Create user
         user = User(
-            email="test@example.com", username="testuser", hashed_password="password"
+            email=f"test{unique_id}@example.com",
+            username=f"testuser{unique_id}",
+            hashed_password="password",
         )
         test_session.add(user)
         test_session.commit()
@@ -357,9 +372,13 @@ class TestDatabaseOperations:
         - Update: User updates work
         - Delete: User deletion works
         """
+        unique_id = str(uuid.uuid4())[:8]
+
         # Create
         user = User(
-            email="crud@example.com", username="cruduser", hashed_password="password"
+            email=f"crud{unique_id}@example.com",
+            username=f"cruduser{unique_id}",
+            hashed_password="password",
         )
         test_session.add(user)
         test_session.commit()
@@ -371,14 +390,14 @@ class TestDatabaseOperations:
         # Read
         retrieved_user = test_session.query(User).filter(User.id == user_id).first()
         assert retrieved_user is not None
-        assert retrieved_user.email == "crud@example.com"
+        assert retrieved_user.email == f"crud{unique_id}@example.com"
 
         # Update
-        retrieved_user.username = "updateduser"
+        retrieved_user.username = f"updateduser{unique_id}"
         test_session.commit()
 
         updated_user = test_session.query(User).filter(User.id == user_id).first()
-        assert updated_user.username == "updateduser"
+        assert updated_user.username == f"updateduser{unique_id}"
 
         # Delete
         test_session.delete(updated_user)
@@ -444,11 +463,25 @@ class TestDatabaseOperations:
         - Filter by username works
         - Multiple users can be queried
         """
+        unique_id = str(uuid.uuid4())[:8]
+
         # Create multiple users
         users_data = [
-            {"email": "user1@example.com", "username": "user1", "password": "pass1"},
-            {"email": "user2@example.com", "username": "user2", "password": "pass2"},
-            {"email": "user3@example.com", "username": "user3", "password": "pass3"},
+            {
+                "email": f"user1{unique_id}@example.com",
+                "username": f"user1{unique_id}",
+                "password": "pass1",
+            },
+            {
+                "email": f"user2{unique_id}@example.com",
+                "username": f"user2{unique_id}",
+                "password": "pass2",
+            },
+            {
+                "email": f"user3{unique_id}@example.com",
+                "username": f"user3{unique_id}",
+                "password": "pass3",
+            },
         ]
 
         for user_data in users_data:
@@ -463,15 +496,21 @@ class TestDatabaseOperations:
 
         # Test filter by email
         user1 = (
-            test_session.query(User).filter(User.email == "user1@example.com").first()
+            test_session.query(User)
+            .filter(User.email == f"user1{unique_id}@example.com")
+            .first()
         )
         assert user1 is not None
-        assert user1.username == "user1"
+        assert user1.username == f"user1{unique_id}"
 
         # Test filter by username
-        user2 = test_session.query(User).filter(User.username == "user2").first()
+        user2 = (
+            test_session.query(User)
+            .filter(User.username == f"user2{unique_id}")
+            .first()
+        )
         assert user2 is not None
-        assert user2.email == "user2@example.com"
+        assert user2.email == f"user2{unique_id}@example.com"
 
         # Test count
         total_users = test_session.query(User).count()
@@ -488,7 +527,7 @@ class TestDatabaseOperations:
         """
         # Create multiple history entries
         entries_data = [
-            {"concept": "Algorithm", "explanation": "Step by step"},
+            {"concept": "Algorithm", "explanation": "Step by step instructions"},
             {"concept": "Variable", "explanation": "Data storage"},
             {"concept": "Function", "explanation": "Reusable code"},
         ]
@@ -518,7 +557,7 @@ class TestDatabaseOperations:
             .first()
         )
         assert algo_entry is not None
-        assert algo_entry.explanation == "Step by step"
+        assert algo_entry.explanation == "Step by step instructions"
 
         # Test ordering
         ordered_entries = (
@@ -551,12 +590,13 @@ class TestDatabaseIntegration:
         # Create two separate sessions
         session1 = SessionLocal()
         session2 = SessionLocal()
+        unique_id = str(uuid.uuid4())[:8]
 
         try:
             # Add user in session1
             user1 = User(
-                email="session1@example.com",
-                username="session1user",
+                email=f"session1{unique_id}@example.com",
+                username=f"session1user{unique_id}",
                 hashed_password="password1",
             )
             session1.add(user1)
@@ -565,7 +605,7 @@ class TestDatabaseIntegration:
             # Try to find user in session2
             user_in_session2 = (
                 session2.query(User)
-                .filter(User.email == "session1@example.com")
+                .filter(User.email == f"session1{unique_id}@example.com")
                 .first()
             )
             assert user_in_session2 is None  # Should not be visible
@@ -576,7 +616,7 @@ class TestDatabaseIntegration:
             # Now should be visible in session2
             user_in_session2 = (
                 session2.query(User)
-                .filter(User.email == "session1@example.com")
+                .filter(User.email == f"session1{unique_id}@example.com")
                 .first()
             )
             assert user_in_session2 is not None
@@ -593,16 +633,21 @@ class TestDatabaseIntegration:
         - Rollback undoes uncommitted changes
         - Data integrity is maintained
         """
+        unique_id = str(uuid.uuid4())[:8]
+
         # Count initial users
         initial_count = test_session.query(User).count()
 
         # Add a user
         user = User(
-            email="rollback@example.com",
-            username="rollbackuser",
+            email=f"rollback{unique_id}@example.com",
+            username=f"rollbackuser{unique_id}",
             hashed_password="password",
         )
         test_session.add(user)
+
+        # Flush to make the object visible in queries but don't commit
+        test_session.flush()
 
         # Verify user is in session but not committed
         session_count = test_session.query(User).count()
@@ -618,7 +663,7 @@ class TestDatabaseIntegration:
         # Verify user is not in database
         rolled_back_user = (
             test_session.query(User)
-            .filter(User.email == "rollback@example.com")
+            .filter(User.email == f"rollback{unique_id}@example.com")
             .first()
         )
         assert rolled_back_user is None
@@ -635,13 +680,14 @@ class TestDatabaseIntegration:
         SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
         sessions = [SessionLocal() for _ in range(3)]
+        unique_id = str(uuid.uuid4())[:8]
 
         try:
             # Create users in different sessions
             for i, session in enumerate(sessions):
                 user = User(
-                    email=f"concurrent{i}@example.com",
-                    username=f"concurrent{i}",
+                    email=f"concurrent{i}{unique_id}@example.com",
+                    username=f"concurrent{i}{unique_id}",
                     hashed_password=f"password{i}",
                 )
                 session.add(user)
@@ -651,11 +697,11 @@ class TestDatabaseIntegration:
             for i, session in enumerate(sessions):
                 user = (
                     session.query(User)
-                    .filter(User.email == f"concurrent{i}@example.com")
+                    .filter(User.email == f"concurrent{i}{unique_id}@example.com")
                     .first()
                 )
                 assert user is not None
-                assert user.username == f"concurrent{i}"
+                assert user.username == f"concurrent{i}{unique_id}"
 
         finally:
             for session in sessions:

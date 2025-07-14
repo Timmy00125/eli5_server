@@ -35,7 +35,23 @@ def test_db():
     db_fd, db_path = tempfile.mkstemp()
     test_database_url: str = f"sqlite:///{db_path}"
 
-    engine = create_engine(test_database_url, connect_args={"check_same_thread": False})
+    engine = create_engine(
+        test_database_url,
+        connect_args={"check_same_thread": False},
+        # Enable foreign key constraints for SQLite
+        poolclass=None,
+    )
+
+    # Enable foreign key constraints for SQLite
+    from sqlalchemy import event
+
+    @event.listens_for(engine, "connect")
+    def set_sqlite_pragma(dbapi_connection, connection_record):
+        if "sqlite" in str(engine.url):
+            cursor = dbapi_connection.cursor()
+            cursor.execute("PRAGMA foreign_keys=ON")
+            cursor.close()
+
     Base.metadata.create_all(bind=engine)
 
     yield engine, db_path
@@ -94,9 +110,12 @@ def sample_user_data() -> dict[str, str]:
     """
     Sample user data for testing user creation and authentication.
     """
+    import uuid
+
+    unique_id = str(uuid.uuid4())[:8]
     return {
-        "email": "test@example.com",
-        "username": "testuser",
+        "email": f"test{unique_id}@example.com",
+        "username": f"testuser{unique_id}",
         "password": "testpassword123",
     }  # type: ignore[misc]
 
