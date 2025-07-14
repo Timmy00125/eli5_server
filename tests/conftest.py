@@ -5,11 +5,12 @@ Defines fixtures, test settings, and common test utilities.
 
 import os
 import tempfile
+from unittest.mock import Mock, patch
+
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from unittest.mock import Mock, patch
 
 # Set test environment variables before importing app modules
 os.environ["DATABASE_URL"] = "sqlite:///./test_eli5.db"
@@ -18,7 +19,7 @@ os.environ["GEMINI_API_KEY"] = "test-api-key"
 os.environ["GEMINI_MODEL"] = "gemini-pro"
 os.environ["DEBUG"] = "True"
 
-from database import Base, get_db, User, HistoryEntry
+from database import Base, HistoryEntry, User, get_db
 from main import app
 
 
@@ -28,65 +29,60 @@ def test_db():
     Create a test database for the entire test session.
     Uses SQLite in-memory database for fast testing.
     """
-    # Create a temporary database file
+
+    db_fd: int
+    db_path: str
     db_fd, db_path = tempfile.mkstemp()
-    test_database_url = f"sqlite:///{db_path}"
+    test_database_url: str = f"sqlite:///{db_path}"
 
-    # Create test engine
     engine = create_engine(test_database_url, connect_args={"check_same_thread": False})
-
-    # Create all tables
     Base.metadata.create_all(bind=engine)
 
     yield engine, db_path
 
-    # Cleanup
     os.close(db_fd)
     os.unlink(db_path)
 
 
 @pytest.fixture
-def test_session(test_db):
+def test_session(test_db) -> "sessionmaker":  # type: ignore[no-untyped-def, misc]
     """
     Create a database session for each test.
     Rolls back transactions after each test to ensure test isolation.
     """
-    engine, _ = test_db
-    TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-
-    session = TestingSessionLocal()
-
-    yield session
-
-    session.close()
+    engine, _ = test_db  # type: ignore[misc]
+    TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)  # type: ignore[arg-type]
+    session = TestingSessionLocal()  # type: ignore[call-arg]
+    yield session  # type: ignore[misc]
+    session.close()  # type: ignore[misc]
 
 
 @pytest.fixture
-def client(test_session):
+def client(test_session) -> TestClient:  # type: ignore[no-untyped-def, misc]
     """
     Create a test client with test database dependency override.
     """
 
-    def override_get_db():
+    def override_get_db():  # type: ignore[misc]
         try:
-            yield test_session
+            yield test_session  # type: ignore[misc]
         finally:
             pass
 
-    app.dependency_overrides[get_db] = override_get_db
+    app.dependency_overrides[get_db] = override_get_db  # type: ignore[misc]
 
     with TestClient(app) as test_client:
-        yield test_client
+        yield test_client  # type: ignore[misc]
 
-    app.dependency_overrides.clear()
+    app.dependency_overrides.clear()  # type: ignore[misc]
 
 
 @pytest.fixture
-def mock_gemini_client():
+def mock_gemini_client():  # type: ignore
     """
     Mock Gemini API client for testing API endpoints without external dependencies.
     """
-    with patch("main.client") as mock_client:
+    with patch("main.client") as mock_client:  # type: ignore[attr-defined]
         mock_response = Mock()
         mock_response.text = "This is a test explanation for testing purposes."
         mock_client.models.generate_content.return_value = mock_response
@@ -94,7 +90,7 @@ def mock_gemini_client():
 
 
 @pytest.fixture
-def sample_user_data():
+def sample_user_data() -> dict[str, str]:
     """
     Sample user data for testing user creation and authentication.
     """
@@ -102,65 +98,65 @@ def sample_user_data():
         "email": "test@example.com",
         "username": "testuser",
         "password": "testpassword123",
-    }
+    }  # type: ignore[misc]
 
 
 @pytest.fixture
-def sample_user(test_session, sample_user_data):
+def sample_user(test_session, sample_user_data) -> User:  # type: ignore[no-untyped-def, misc]
     """
     Create a sample user in the test database.
     """
-    from auth import hash_password
+    from auth import hash_password  # type: ignore
 
     user = User(
         email=sample_user_data["email"],
         username=sample_user_data["username"],
-        hashed_password=hash_password(sample_user_data["password"]),
-    )
-    test_session.add(user)
-    test_session.commit()
-    test_session.refresh(user)
+        hashed_password=hash_password(sample_user_data["password"]),  # type: ignore
+    )  # type: ignore[misc]
+    test_session.add(user)  # type: ignore[misc]
+    test_session.commit()  # type: ignore[misc]
+    test_session.refresh(user)  # type: ignore[misc]
 
-    return user
+    return user  # type: ignore[misc]
 
 
 @pytest.fixture
-def auth_headers(sample_user):
+def auth_headers(sample_user) -> dict[str, str]:  # type: ignore[no-untyped-def, misc]
     """
     Create authentication headers for testing protected endpoints.
     """
-    from auth import create_access_token
+    from auth import create_access_token  # type: ignore
 
-    token = create_access_token(data={"sub": sample_user.email})
-    return {"Authorization": f"Bearer {token}"}
+    token = create_access_token(data={"sub": sample_user.email})  # type: ignore[misc]
+    return {"Authorization": f"Bearer {token}"}  # type: ignore[misc]
 
 
 @pytest.fixture
-def sample_history_entry_data():
+def sample_history_entry_data() -> dict[str, str]:
     """
     Sample history entry data for testing history operations.
     """
     return {
         "concept": "Algorithm",
         "explanation": "An algorithm is like a recipe for solving problems step by step.",
-    }
+    }  # type: ignore[misc]
 
 
 @pytest.fixture
-def sample_history_entry(test_session, sample_user, sample_history_entry_data):
+def sample_history_entry(test_session, sample_user, sample_history_entry_data):  # type: ignore[no-untyped-def, misc]
     """
     Create a sample history entry in the test database.
     """
     history_entry = HistoryEntry(
-        user_id=sample_user.id,
+        user_id=sample_user.id,  # type: ignore
         concept=sample_history_entry_data["concept"],
         explanation=sample_history_entry_data["explanation"],
-    )
-    test_session.add(history_entry)
-    test_session.commit()
-    test_session.refresh(history_entry)
+    )  # type: ignore[misc]
+    test_session.add(history_entry)  # type: ignore[misc]
+    test_session.commit()  # type: ignore[misc]
+    test_session.refresh(history_entry)  # type: ignore[misc]
 
-    return history_entry
+    return history_entry  # type: ignore[misc]
 
 
 # Test configuration
