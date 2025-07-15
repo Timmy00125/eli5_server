@@ -6,8 +6,8 @@ import os
 import random
 import logging
 from fastapi import APIRouter, HTTPException
-from google.genai import types
-from google import genai
+from google.genai import types  # type: ignore
+from google import genai  # type: ignore[import-untyped]
 
 from schemas import ConceptResponse
 
@@ -105,7 +105,7 @@ async def explain_concept():
         )
 
         # Generate content
-        response = client.models.generate_content(
+        response = client.models.generate_content(  # type: ignore
             model=model,
             contents=contents,
             config=generate_content_config,
