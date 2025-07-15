@@ -5,6 +5,9 @@
 
 set -e  # Exit on any error
 
+# Global variables
+COVERAGE_AVAILABLE=false
+
 # Colors for output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -41,13 +44,28 @@ check_dependencies() {
         exit 1
     fi
     
-    print_colored $GREEN "✅ All dependencies are available"
+    # Check for pytest-cov specifically when running coverage tests
+    if ! python3 -c "import pytest_cov" &> /dev/null; then
+        print_colored $YELLOW "⚠️  pytest-cov is not installed"
+        print_colored $YELLOW "Coverage features will be disabled"
+        print_colored $YELLOW "Install with: pip install pytest-cov"
+        COVERAGE_AVAILABLE=false
+    else
+        COVERAGE_AVAILABLE=true
+    fi
+    
+    print_colored $GREEN "✅ All core dependencies are available"
 }
 
 # Function to run all tests
 run_all_tests() {
     print_header "Running All Tests"
-    python3 -m pytest tests/ -v --cov=. --cov-report=term-missing --cov-report=html
+    if [ "$COVERAGE_AVAILABLE" = true ]; then
+        python3 -m pytest tests/ -v --cov=. --cov-report=term-missing --cov-report=html
+    else
+        print_colored $YELLOW "⚠️  Running tests without coverage (pytest-cov not available)"
+        python3 -m pytest tests/ -v
+    fi
 }
 
 # Function to run unit tests only
@@ -65,10 +83,16 @@ run_integration_tests() {
 # Function to run tests with coverage
 run_coverage() {
     print_header "Running Tests with Coverage"
-    python3 -m pytest tests/ --cov=. --cov-report=term-missing --cov-report=html --cov-fail-under=80
-    
-    if [ -d "htmlcov" ]; then
-        print_colored $GREEN "📊 Coverage report generated in htmlcov/index.html"
+    if [ "$COVERAGE_AVAILABLE" = true ]; then
+        python3 -m pytest tests/ --cov=. --cov-report=term-missing --cov-report=html --cov-fail-under=80
+        
+        if [ -d "htmlcov" ]; then
+            print_colored $GREEN "📊 Coverage report generated in htmlcov/index.html"
+        fi
+    else
+        print_colored $RED "❌ Coverage testing requires pytest-cov"
+        print_colored $YELLOW "Install with: pip install pytest-cov"
+        exit 1
     fi
 }
 
@@ -149,19 +173,32 @@ generate_test_report() {
     mkdir -p "$REPORT_DIR"
     
     # Run tests with detailed output
-    python3 -m pytest tests/ \
-        --cov=. \
-        --cov-report=html:"$REPORT_DIR/coverage" \
-        --cov-report=xml:"$REPORT_DIR/coverage.xml" \
-        --junit-xml="$REPORT_DIR/junit.xml" \
-        --html="$REPORT_DIR/report.html" \
-        --self-contained-html \
-        -v
-    
-    print_colored $GREEN "📋 Test reports generated in $REPORT_DIR/"
-    print_colored $GREEN "   - HTML Report: $REPORT_DIR/report.html"
-    print_colored $GREEN "   - Coverage: $REPORT_DIR/coverage/index.html"
-    print_colored $GREEN "   - JUnit XML: $REPORT_DIR/junit.xml"
+    if [ "$COVERAGE_AVAILABLE" = true ]; then
+        python3 -m pytest tests/ \
+            --cov=. \
+            --cov-report=html:"$REPORT_DIR/coverage" \
+            --cov-report=xml:"$REPORT_DIR/coverage.xml" \
+            --junit-xml="$REPORT_DIR/junit.xml" \
+            --html="$REPORT_DIR/report.html" \
+            --self-contained-html \
+            -v
+        
+        print_colored $GREEN "📋 Test reports generated in $REPORT_DIR/"
+        print_colored $GREEN "   - HTML Report: $REPORT_DIR/report.html"
+        print_colored $GREEN "   - Coverage: $REPORT_DIR/coverage/index.html"
+        print_colored $GREEN "   - JUnit XML: $REPORT_DIR/junit.xml"
+    else
+        python3 -m pytest tests/ \
+            --junit-xml="$REPORT_DIR/junit.xml" \
+            --html="$REPORT_DIR/report.html" \
+            --self-contained-html \
+            -v
+        
+        print_colored $GREEN "📋 Test reports generated in $REPORT_DIR/"
+        print_colored $GREEN "   - HTML Report: $REPORT_DIR/report.html"
+        print_colored $GREEN "   - JUnit XML: $REPORT_DIR/junit.xml"
+        print_colored $YELLOW "⚠️  Coverage report not available (pytest-cov not installed)"
+    fi
 }
 
 # Function to clean test artifacts
