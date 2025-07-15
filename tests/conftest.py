@@ -98,7 +98,7 @@ def mock_gemini_client():  # type: ignore
     """
     Mock Gemini API client for testing API endpoints without external dependencies.
     """
-    with patch("main.client") as mock_client:  # type: ignore[attr-defined]
+    with patch("routers.explain.client") as mock_client:  # type: ignore[attr-defined]
         mock_response = Mock()
         mock_response.text = "This is a test explanation for testing purposes."
         mock_client.models.generate_content.return_value = mock_response
