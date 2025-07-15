@@ -31,7 +31,10 @@ async def get_user_history(
     Returns paginated list of user's saved concept explanations.
     """
     entries, total = HistoryService.get_user_history(
-        db, current_user.id.value, limit, offset
+        db,
+        current_user.id,  # type: ignore
+        limit,
+        offset,  # type: ignore
     )
 
     return HistoryListResponse(
@@ -56,7 +59,9 @@ async def save_history_entry(
     """
     try:
         entry: HistoryEntry = HistoryService.save_history_entry(
-            db, current_user.id.value, history_data
+            db,
+            current_user.id,  # type: ignore
+            history_data,  # type: ignore
         )
         return HistoryEntryResponse.model_validate(entry)
     except Exception as e:
@@ -78,7 +83,9 @@ async def delete_history_entry(
     Removes a specific history entry from the user's saved explanations.
     """
     success: bool = HistoryService.delete_history_entry(
-        db, entry_id, current_user.id.value
+        db,
+        entry_id,
+        current_user.id,  # type: ignore
     )
 
     if not success:
