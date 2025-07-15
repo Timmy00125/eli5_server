@@ -5,19 +5,21 @@ Handles password hashing, JWT tokens, and user verification.
 
 import os
 from datetime import datetime, timedelta, timezone
-from typing import Optional, Any
+from typing import Any, Optional
+
+from dotenv import load_dotenv
+from fastapi import Depends, HTTPException, status
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jose import JWTError, jwt
 from passlib.context import CryptContext
-from fastapi import HTTPException, status, Depends
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
-from database import get_db, User
-from dotenv import load_dotenv
+
+from database import User, get_db
 
 load_dotenv()
 
 # Security configuration
-SECRET_KEY = os.getenv("SECRET_KEY", "your-secret-key-change-in-production")
+SECRET_KEY: str = os.getenv("SECRET_KEY", "your-secret-key-change-in-production")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
@@ -68,16 +70,16 @@ def create_access_token(
     Returns:
         Encoded JWT token
     """
-    to_encode = data.copy()
+    to_encode: dict[str, Any] = data.copy()
     if expires_delta:
-        expire = datetime.now(timezone.utc) + expires_delta
+        expire: datetime = datetime.now(timezone.utc) + expires_delta
     else:
         expire = datetime.now(timezone.utc) + timedelta(
             minutes=ACCESS_TOKEN_EXPIRE_MINUTES
         )
 
     to_encode.update({"exp": expire})
-    encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+    encoded_jwt: str = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt
 
 
@@ -92,7 +94,7 @@ def verify_token(token: str) -> Optional[str]:
         Email from token if valid, None otherwise
     """
     try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        payload: dict[str, Any] = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         email: Optional[str] = payload.get("sub")
         if email is None:
             return None
@@ -141,7 +143,7 @@ def authenticate_user(db: Session, email: str, password: str) -> Optional[User]:
     Returns:
         User object if authentication successful, None otherwise
     """
-    user = get_user_by_email(db, email)
+    user: User | None = get_user_by_email(db, email)
     if not user:
         return None
     if not verify_password(password, str(user.hashed_password)):
@@ -166,8 +168,8 @@ def get_current_user(
     Raises:
         HTTPException: If authentication fails
     """
-    token = credentials.credentials
-    email = verify_token(token)
+    token: str = credentials.credentials
+    email: str | None = verify_token(token)
 
     if email is None:
         raise HTTPException(
@@ -176,7 +178,7 @@ def get_current_user(
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-    user = get_user_by_email(db, email)
+    user: User | None = get_user_by_email(db, email)
     if user is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,

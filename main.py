@@ -1,17 +1,19 @@
 # Import necessary libraries
+import logging
 from contextlib import asynccontextmanager
+from typing import AsyncGenerator
+
+from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-import logging
-from dotenv import load_dotenv
 
 # Import our custom modules
 from database import create_tables
-from routers import auth, history, explain, health
+from routers import auth, explain, health, history
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+logger: logging.Logger = logging.getLogger(__name__)
 
 # Load environment variables
 load_dotenv()
@@ -21,7 +23,7 @@ load_dotenv()
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI):
+async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     """
     Application lifespan handler.
     Initializes database tables when the application starts.
@@ -48,7 +50,7 @@ app = FastAPI(
 )
 
 # List of allowed origins
-origins = [
+origins: list[str] = [
     "http://localhost:3000",  # Local development
     "https://eli5-client.vercel.app",  # Production
 ]

@@ -4,31 +4,36 @@ Handles user authentication and history management.
 """
 
 import os
+from datetime import datetime
+from logging import Logger
+from typing import Any, Generator, List
+
+from dotenv import load_dotenv
 from sqlalchemy import (
-    create_engine,
     Column,
+    DateTime,
+    Engine,
+    ForeignKey,
     Integer,
     String,
     Text,
-    DateTime,
-    ForeignKey,
+    create_engine,
 )
-from sqlalchemy.orm import declarative_base
-from sqlalchemy.orm import sessionmaker, relationship
+from sqlalchemy.orm import Mapped, declarative_base, relationship, sessionmaker
+from sqlalchemy.orm.session import Session
 from sqlalchemy.sql import func
-from dotenv import load_dotenv
 
 load_dotenv()
 
 # Database URL configuration
 # For development: Use SQLite (file-based, no server needed)
 # For production: Set DATABASE_URL environment variable to PostgreSQL URL
-DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./eli5_dev.db")
+DATABASE_URL: str = os.getenv("DATABASE_URL", "sqlite:///./eli5_dev.db")
 
 # Create engine with appropriate settings for SQLite
 if DATABASE_URL.startswith("sqlite"):
     # SQLite-specific configuration
-    engine = create_engine(
+    engine: Engine = create_engine(
         DATABASE_URL,
         connect_args={"check_same_thread": False},  # Needed for SQLite with FastAPI
     )
@@ -37,10 +42,12 @@ else:
     engine = create_engine(DATABASE_URL)
 
 # Create SessionLocal class
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+SessionLocal: sessionmaker[Session] = sessionmaker(
+    autocommit=False, autoflush=False, bind=engine
+)
 
 # Create Base class
-Base = declarative_base()
+Base: Any = declarative_base()
 
 
 class User(Base):
@@ -49,17 +56,19 @@ class User(Base):
     Stores user credentials and basic information.
     """
 
-    __tablename__ = "users"
+    __tablename__: str = "users"
 
-    id = Column(Integer, primary_key=True, index=True)
-    email = Column(String, unique=True, index=True, nullable=False)
-    username = Column(String, unique=True, index=True, nullable=False)
-    hashed_password = Column(String, nullable=False)
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+    id: Column[int] = Column(Integer, primary_key=True, index=True)
+    email: Column[str] = Column(String, unique=True, index=True, nullable=False)
+    username: Column[str] = Column(String, unique=True, index=True, nullable=False)
+    hashed_password: Column[str] = Column(String, nullable=False)
+    created_at: Column[datetime] = Column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+    updated_at: Column[datetime] = Column(DateTime(timezone=True), onupdate=func.now())
 
     # Relationship to history entries
-    history_entries = relationship(
+    history_entries: Mapped[List["HistoryEntry"]] = relationship(
         "HistoryEntry",
         back_populates="user",
         cascade="all, delete-orphan",
@@ -73,40 +82,42 @@ class HistoryEntry(Base):
     Links to the User model to provide personalized history.
     """
 
-    __tablename__ = "history_entries"
+    __tablename__: str = "history_entries"
 
-    id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(
+    id: Column[int] = Column(Integer, primary_key=True, index=True)
+    user_id: Column[int] = Column(
         Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False
     )
-    concept = Column(String, nullable=False)
-    explanation = Column(Text, nullable=False)
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    concept: Column[str] = Column(String, nullable=False)
+    explanation: Column[str] = Column(Text, nullable=False)
+    created_at: Column[datetime] = Column(
+        DateTime(timezone=True), server_default=func.now()
+    )
 
     # Relationship to user
-    user = relationship("User", back_populates="history_entries")
+    user: Mapped["User"] = relationship("User", back_populates="history_entries")
 
 
-def get_db():
+def get_db() -> Generator[Session, Any, None]:
     """
     Dependency to get database session.
     Ensures proper session management and cleanup.
     """
-    db = SessionLocal()
+    db: Session = SessionLocal()
     try:
         yield db
     finally:
         db.close()
 
 
-def create_tables():
+def create_tables() -> None:
     """
     Create all database tables.
     Should be called when initializing the application.
     """
     import logging
 
-    logger = logging.getLogger(__name__)
+    logger: Logger = logging.getLogger(__name__)
     try:
         Base.metadata.create_all(bind=engine)
         logger.info("Database tables created successfully.")
