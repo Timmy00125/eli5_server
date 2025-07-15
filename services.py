@@ -6,12 +6,13 @@ Contains business logic for user management and history tracking.
 from typing import List, Optional
 from sqlalchemy.orm import Session
 from sqlalchemy import desc
+from sqlalchemy.orm.query import Query
 from database import User, HistoryEntry
 from auth import hash_password, get_user_by_email, get_user_by_username
 from schemas import UserRegistration, SaveHistoryRequest
 import logging
 
-logger = logging.getLogger(__name__)
+logger: logging.Logger = logging.getLogger(__name__)
 
 
 class UserService:
@@ -33,17 +34,17 @@ class UserService:
             ValueError: If email or username already exists
         """
         # Check if email already exists
-        existing_user = get_user_by_email(db, user_data.email)
+        existing_user: User | None = get_user_by_email(db, user_data.email)
         if existing_user:
             raise ValueError("Email already registered")
 
         # Check if username already exists
-        existing_username = get_user_by_username(db, user_data.username)
+        existing_username: User | None = get_user_by_username(db, user_data.username)
         if existing_username:
             raise ValueError("Username already taken")
 
         # Create new user
-        hashed_password = hash_password(user_data.password)
+        hashed_password: str = hash_password(user_data.password)
         db_user = User(
             email=user_data.email,
             username=user_data.username,
@@ -119,13 +120,15 @@ class HistoryService:
         Returns:
             Tuple of (history entries list, total count)
         """
-        query = db.query(HistoryEntry).filter(HistoryEntry.user_id == user_id)
+        query: Query[HistoryEntry] = db.query(HistoryEntry).filter(
+            HistoryEntry.user_id == user_id
+        )
 
         # Get total count
-        total = query.count()
+        total: int = query.count()
 
         # Get paginated results, ordered by creation date (newest first)
-        entries = (
+        entries: List[HistoryEntry] = (
             query.order_by(desc(HistoryEntry.created_at))
             .offset(offset)
             .limit(limit)
@@ -168,7 +171,9 @@ class HistoryService:
         Returns:
             True if deleted successfully, False if not found
         """
-        entry = HistoryService.get_history_entry_by_id(db, entry_id, user_id)
+        entry: HistoryEntry | None = HistoryService.get_history_entry_by_id(
+            db, entry_id, user_id
+        )
         if not entry:
             return False
 
