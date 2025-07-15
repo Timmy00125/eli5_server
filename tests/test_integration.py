@@ -88,7 +88,7 @@ class TestAPIIntegration:
         - Status codes are appropriate
         """
         # Test API error when Gemini fails
-        with patch("main.client") as mock_client:
+        with patch("routers.explain.client") as mock_client:
             mock_client.models.generate_content.side_effect = Exception("API Error")
 
             response = client.get("/api/explain")
@@ -244,7 +244,7 @@ class TestApplicationStartup:
         - Configuration is applied properly
         """
         import os
-        from main import api_key
+        from routers.explain import api_key
 
         # Verify API key is loaded (in test it's mocked)
         assert api_key is not None
@@ -258,7 +258,7 @@ class TestApplicationStartup:
         - Error handling works for failed initialization
         """
         # This is tested in the main module during import
-        from main import client
+        from routers.explain import client
 
         assert client is not None
 
@@ -394,14 +394,14 @@ class TestPerformanceIntegration:
         - Subsequent requests work after errors
         """
         # First, cause an error
-        with patch("main.client") as mock_client:
+        with patch("routers.explain.client") as mock_client:
             mock_client.models.generate_content.side_effect = Exception("Test Error")
 
             error_response = client.get("/api/explain")
             assert error_response.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
 
         # Then verify normal operation works
-        with patch("main.client") as mock_client:
+        with patch("routers.explain.client") as mock_client:
             mock_client.models.generate_content.return_value.text = "Recovery test"
 
             success_response = client.get("/api/explain")

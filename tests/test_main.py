@@ -34,7 +34,7 @@ class TestMainAPI:
         assert len(data["explanation"]) > 0
 
         # Verify the concept is from the predefined list
-        from main import CS_CONCEPTS
+        from routers.explain import CS_CONCEPTS
 
         assert data["concept"] in CS_CONCEPTS
 
@@ -49,12 +49,12 @@ class TestMainAPI:
         - Returns 500 status code when API key is not configured
         - Error message indicates API key issue
         """
-        with patch("main.api_key", None):
+        with patch("routers.explain.api_key", None):
             response = client.get("/api/explain")
 
             assert response.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
             data = response.json()
-            assert "API key not configured" in data["detail"]
+            assert "Gemini API not configured" in data["detail"]
 
     def test_api_explain_endpoint_gemini_error(self, client):
         """
@@ -65,7 +65,7 @@ class TestMainAPI:
         - Error message includes original error details
         - Handles external service failures gracefully
         """
-        with patch("main.client") as mock_client:
+        with patch("routers.explain.client") as mock_client:
             mock_client.models.generate_content.side_effect = Exception("API Error")
 
             response = client.get("/api/explain")
@@ -133,7 +133,7 @@ class TestMainAPI:
         - Multiple calls can return different concepts
         - All returned concepts are from the predefined list
         """
-        from main import CS_CONCEPTS
+        from routers.explain import CS_CONCEPTS
 
         concepts_seen = set()
 
@@ -160,7 +160,7 @@ class TestMainAPI:
         - Prompt contains the concept name
         - Prompt includes required instructions
         """
-        from main import generate_prompt
+        from routers.explain import generate_prompt
 
         concept = "Algorithm"
         prompt = generate_prompt(concept)
@@ -182,7 +182,7 @@ class TestMainAPI:
         - No duplicate concepts
         - Common CS concepts are included
         """
-        from main import CS_CONCEPTS
+        from routers.explain import CS_CONCEPTS
 
         assert isinstance(CS_CONCEPTS, list)
         assert len(CS_CONCEPTS) > 20  # Should have substantial number of concepts
@@ -198,7 +198,7 @@ class TestMainAPI:
         for concept in expected_concepts:
             assert concept in CS_CONCEPTS
 
-    @patch("main.logger")
+    @patch("routers.explain.logger")
     def test_logging_behavior(self, mock_logger, client, mock_gemini_client):
         """
         Test that appropriate logging occurs during API calls.
@@ -284,7 +284,7 @@ class TestMainAPI:
         - Error messages are informative but not exposing internals
         """
         # Test various error conditions
-        with patch("main.client") as mock_client:
+        with patch("routers.explain.client") as mock_client:
             # Test different types of exceptions
             error_scenarios = [
                 (ConnectionError("Network error"), "network"),
@@ -314,14 +314,14 @@ class TestApplicationConfiguration:
         - Client is initialized with proper API key
         - Error handling for initialization failures
         """
-        with patch("main.genai.Client") as mock_client_class:
+        with patch("routers.explain.genai.Client") as mock_client_class:
             mock_client_class.return_value = Mock()
 
             # Reload the module to test initialization
             import importlib
-            import main
+            import routers.explain
 
-            importlib.reload(main)
+            importlib.reload(routers.explain)
 
             # Verify client was initialized with API key
             mock_client_class.assert_called_with(api_key="test-api-key")
@@ -352,7 +352,7 @@ class TestApplicationConfiguration:
 
         # Test default model
         with patch.dict(os.environ, {}, clear=True):
-            from main import generate_prompt
+            from routers.explain import generate_prompt
 
             # This function should work regardless of model configuration
             prompt = generate_prompt("Test")
