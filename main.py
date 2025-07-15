@@ -1,12 +1,9 @@
 # Import necessary libraries
-import os
-import random
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 import logging
 from dotenv import load_dotenv
-from google import genai
 
 # Import our custom modules
 from database import create_tables
@@ -21,7 +18,6 @@ load_dotenv()
 
 # Import the variables and functions that tests expect
 # These imports need to be here for the tests to find them
-from routers.explain import CS_CONCEPTS, api_key, client, generate_prompt
 
 
 @asynccontextmanager
