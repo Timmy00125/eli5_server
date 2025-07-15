@@ -3,24 +3,27 @@ Routers for authentication endpoints.
 """
 
 from datetime import timedelta
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
-from database import get_db, User
-from schemas import UserRegistration, UserLogin, TokenResponse, UserResponse
-from services import UserService
 from auth import (
+    ACCESS_TOKEN_EXPIRE_MINUTES,
     authenticate_user,
     create_access_token,
     get_current_user,
-    ACCESS_TOKEN_EXPIRE_MINUTES,
 )
+from database import User, get_db
+from schemas import TokenResponse, UserLogin, UserRegistration, UserResponse
+from services import UserService
 
 router = APIRouter(prefix="/api/auth", tags=["Authentication"])
 
 
 @router.post("/register", response_model=TokenResponse)
-async def register_user(user_data: UserRegistration, db: Session = Depends(get_db)):
+async def register_user(
+    user_data: UserRegistration, db: Session = Depends(get_db)
+) -> TokenResponse:
     """
     Register a new user account.
 
@@ -28,9 +31,9 @@ async def register_user(user_data: UserRegistration, db: Session = Depends(get_d
     Returns access token for immediate login.
     """
     try:
-        user = UserService.create_user(db, user_data)
+        user: User = UserService.create_user(db, user_data)
         access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-        access_token = create_access_token(
+        access_token: str = create_access_token(
             data={"sub": user.email}, expires_delta=access_token_expires
         )
         return TokenResponse(access_token=access_token, user=user)
@@ -44,13 +47,15 @@ async def register_user(user_data: UserRegistration, db: Session = Depends(get_d
 
 
 @router.post("/login", response_model=TokenResponse)
-async def login_user(user_data: UserLogin, db: Session = Depends(get_db)):
+async def login_user(
+    user_data: UserLogin, db: Session = Depends(get_db)
+) -> TokenResponse:
     """
     Authenticate user and return access token.
 
     Verifies email and password, returns JWT token for authenticated requests.
     """
-    user = authenticate_user(db, user_data.email, user_data.password)
+    user: User | None = authenticate_user(db, user_data.email, user_data.password)
     if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -59,7 +64,7 @@ async def login_user(user_data: UserLogin, db: Session = Depends(get_db)):
         )
 
     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-    access_token = create_access_token(
+    access_token: str = create_access_token(
         data={"sub": user.email}, expires_delta=access_token_expires
     )
 
@@ -67,7 +72,7 @@ async def login_user(user_data: UserLogin, db: Session = Depends(get_db)):
 
 
 @router.get("/me", response_model=UserResponse)
-async def get_current_user_info(current_user: User = Depends(get_current_user)):
+async def get_current_user_info(current_user: User = Depends(get_current_user)) -> User:
     """
     Get current authenticated user information.
 

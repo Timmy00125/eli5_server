@@ -2,18 +2,18 @@
 Routers for history endpoints.
 """
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
-from database import get_db, User
+from auth import get_current_user
+from database import HistoryEntry, User, get_db
 from schemas import (
-    HistoryListResponse,
-    SaveHistoryRequest,
     HistoryEntryResponse,
+    HistoryListResponse,
     MessageResponse,
+    SaveHistoryRequest,
 )
 from services import HistoryService
-from auth import get_current_user
 
 router = APIRouter(prefix="/api/history", tags=["History"])
 
@@ -21,10 +21,10 @@ router = APIRouter(prefix="/api/history", tags=["History"])
 @router.get("", response_model=HistoryListResponse)
 async def get_user_history(
     limit: int = 50,
-    offset: int = 0,
+    offset: int = Query(0, ge=0, description="Pagination offset"),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
-):
+) -> HistoryListResponse:
     """
     Get user's history of explained concepts.
 
@@ -35,7 +35,10 @@ async def get_user_history(
     )
 
     return HistoryListResponse(
-        entries=[HistoryEntryResponse.model_validate(entry) for entry in entries],
+        entries=[
+            HistoryEntryResponse.model_validate(entry, by_alias=True)
+            for entry in entries
+        ],
         total=total,
     )
 
@@ -45,14 +48,14 @@ async def save_history_entry(
     history_data: SaveHistoryRequest,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
-):
+) -> HistoryEntryResponse:
     """
     Save a concept explanation to user's history.
 
     Allows authenticated users to save explanations for future reference.
     """
     try:
-        entry = HistoryService.save_history_entry(
+        entry: HistoryEntry = HistoryService.save_history_entry(
             db, current_user.id.value, history_data
         )
         return HistoryEntryResponse.model_validate(entry)
@@ -68,13 +71,15 @@ async def delete_history_entry(
     entry_id: int,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
-):
+) -> MessageResponse:
     """
     Delete a history entry.
 
     Removes a specific history entry from the user's saved explanations.
     """
-    success = HistoryService.delete_history_entry(db, entry_id, current_user.id.value)
+    success: bool = HistoryService.delete_history_entry(
+        db, entry_id, current_user.id.value
+    )
 
     if not success:
         raise HTTPException(

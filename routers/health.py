@@ -4,13 +4,15 @@ Routers for health check endpoints.
 
 from fastapi import APIRouter
 from sqlalchemy import text
+from sqlalchemy.orm.session import Session
+
 from database import get_db
 
 router = APIRouter(tags=["Health"])
 
 
 @router.get("/health")
-async def health_check():
+async def health_check() -> dict[str, str]:
     """
     Simple health check endpoint.
 
@@ -18,12 +20,12 @@ async def health_check():
     """
     try:
         # Test database connection
-        db = next(get_db())
+        db: Session = next(get_db())
         db.execute(text("SELECT 1"))
         db_status = "connected"
         db.close()
     except Exception as e:
-        db_status = f"disconnected: {str(e)}"
+        db_status: str = f"disconnected: {str(e)}"
 
     return {
         "status": "healthy",

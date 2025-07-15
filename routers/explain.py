@@ -2,21 +2,23 @@
 Routers for concept explanation endpoints.
 """
 
+import logging
 import os
 import random
-import logging
+from typing import List
+
 from fastapi import APIRouter, HTTPException
+from google import genai  # type: ignore
 from google.genai import types  # type: ignore
-from google import genai  # type: ignore[import-untyped]
 
 from schemas import ConceptResponse
 
-logger = logging.getLogger(__name__)
+logger: logging.Logger = logging.getLogger(__name__)
 
 router = APIRouter(tags=["Concept Explanation"])
 
 # List of Computer Science Concepts
-CS_CONCEPTS = [
+CS_CONCEPTS: list[str] = [
     "Algorithm",
     "Data Structure",
     "Variable",
@@ -49,7 +51,7 @@ CS_CONCEPTS = [
     "Software Development Life Cycle (SDLC)",
 ]
 
-api_key = os.getenv("GEMINI_API_KEY")
+api_key: str | None = os.getenv("GEMINI_API_KEY")
 client = None
 if api_key:
     try:
@@ -69,8 +71,8 @@ def generate_prompt(concept: str) -> str:
 
 
 @router.get("/api/explain", response_model=ConceptResponse)
-async def explain_concept():
-    concept = random.choice(CS_CONCEPTS)
+async def explain_concept() -> ConceptResponse:
+    concept: str = random.choice(CS_CONCEPTS)
     logger.info(f"Randomly selected concept: {concept}")
 
     if not api_key or not client:
@@ -84,18 +86,16 @@ async def explain_concept():
         logger.info(f"Generating explanation for concept: {concept}")
 
         # Create the prompt
-        prompt = generate_prompt(concept)
+        prompt: str = generate_prompt(concept)
 
         # Set up the model and contents according to the new API format
-        model = os.getenv(
+        model: str = os.getenv(
             "GEMINI_MODEL", "gemini-pro"
         )  # Using gemini-pro as the default model
-        contents = [
+        contents: List[types.Content] = [
             types.Content(
                 role="user",
-                parts=[
-                    types.Part.from_text(text=prompt),
-                ],
+                parts=[types.Part.from_text(text=prompt)],
             ),
         ]
 
@@ -105,7 +105,7 @@ async def explain_concept():
         )
 
         # Generate content
-        response = client.models.generate_content(  # type: ignore
+        response: types.GenerateContentResponse = client.models.generate_content(  # type: ignore
             model=model,
             contents=contents,
             config=generate_content_config,
@@ -114,7 +114,7 @@ async def explain_concept():
         logger.info("Successfully generated content from Gemini API")
 
         # Extract the explanation text from response
-        explanation_text = (
+        explanation_text: str = (
             response.text if response.text else "Unable to generate explanation"
         )
 
@@ -130,7 +130,7 @@ async def explain_concept():
 
 
 @router.get("/api/fallback-explain", response_model=ConceptResponse)
-async def fallback_explain_concept():
+async def fallback_explain_concept() -> ConceptResponse:
     concept = "Algorithms"
     explanation = """Imagine you want to build a really tall tower with your blocks.  You can't just throw blocks randomly, right? You need a plan!
     That's kind of what an **algorithm** is!  It's like a **set of instructions**, like a recipe, to do something.
